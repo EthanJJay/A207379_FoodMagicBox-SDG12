@@ -55,4 +55,8 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+    implementation("androidx.navigation:navigation-compose:2.7.7")
+
+    // 2. ViewModel library for state management (用于状态管理的视图模型库)
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
 }
