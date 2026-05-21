@@ -1,10 +1,23 @@
 package com.example.a207379_zhangjunjie_cikgulzwan_lab1
 
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableStateListOf
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
-// 用户完整信息数据类
+// 声明 DataStore 实例
+private val Application.dataStore: DataStore<Preferences> by preferencesDataStore("user_profile")
+
 data class UserProfile(
     val username: String = "ZHANGJUNJIE",
     val userId: String = "A207379",
@@ -13,48 +26,68 @@ data class UserProfile(
     val residence: String = "Kajang, Malaysia"
 )
 
-// 收藏食物数据类
 data class FoodItem(
     val name: String,
     val price: String,
     val imageRes: Int
 )
 
-class FoodViewModel : ViewModel() {
+class FoodViewModel(application: Application) : AndroidViewModel(application) {
 
-    // 用户信息状态管理
-    var userProfile = mutableStateOf(UserProfile())
-        private set
+    private val database = AppDatabase.getDatabase(application)
+    private val repository = FoodRepository(database.foodDao())
+    private val dataStore = application.dataStore
 
-    // 收藏列表
-    private val _favorites = mutableStateListOf<FoodItem>()
-    val favorites: List<FoodItem> = _favorites
-
-    // 更新用户信息（编辑页面使用）
-    fun updateUserProfile(
-        username: String,
-        age: Int,
-        gender: String,
-        residence: String
-    ) {
-        userProfile.value = userProfile.value.copy(
-            username = username,
-            age = age,
-            gender = gender,
-            residence = residence
-        )
+    private object Keys {
+        val USERNAME = stringPreferencesKey("username")
+        val USER_ID = stringPreferencesKey("user_id")
+        val AGE = intPreferencesKey("age")
+        val GENDER = stringPreferencesKey("gender")
+        val RESIDENCE = stringPreferencesKey("residence")
     }
 
-    // 收藏 / 取消收藏
+    val savedProfile: StateFlow<UserProfile> = dataStore.data
+        .map { prefs ->
+            UserProfile(
+                username = prefs[Keys.USERNAME] ?: "ZHANGJUNJIE",
+                userId = prefs[Keys.USER_ID] ?: "A207379",
+                age = prefs[Keys.AGE] ?: 20,
+                gender = prefs[Keys.GENDER] ?: "Male",
+                residence = prefs[Keys.RESIDENCE] ?: "Kajang, Malaysia"
+            )
+        }
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            UserProfile()
+        )
+
+    val dbFavorites: StateFlow<List<FoodItem>> = repository.allFavorites.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    fun saveUserProfile(username: String, age: Int, gender: String, residence: String) {
+        viewModelScope.launch {
+            dataStore.edit { prefs ->
+                prefs[Keys.USERNAME] = username
+                prefs[Keys.AGE] = age
+                prefs[Keys.GENDER] = gender
+                prefs[Keys.RESIDENCE] = residence
+            }
+        }
+    }
+
     fun toggleFavorite(item: FoodItem) {
-        if (_favorites.contains(item)) {
-            _favorites.remove(item)
+        if (isFavorite(item)) {
+            repository.delete(item)
         } else {
-            _favorites.add(item)
+            repository.insert(item)
         }
     }
 
     fun isFavorite(item: FoodItem): Boolean {
-        return _favorites.contains(item)
+        return dbFavorites.value.any { it.name == item.name }
     }
 }

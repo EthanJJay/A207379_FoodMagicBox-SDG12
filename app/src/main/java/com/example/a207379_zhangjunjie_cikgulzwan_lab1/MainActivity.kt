@@ -38,9 +38,6 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/**
- * [要求 2] 路由定义 (Route Definitions) [cite: 55]
- */
 object Routes {
     const val PAGE_HOME = "home_screen"
     const val PAGE_BOOKINGS = "bookings_screen"
@@ -56,7 +53,6 @@ fun MainAppContainer() {
 
     Scaffold(
         bottomBar = {
-            // 底部导航栏逻辑 (Bottom Navigation Logic)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -73,9 +69,6 @@ fun MainAppContainer() {
             }
         }
     ) { innerPadding ->
-        /**
-         * [要求 2] 导航主机 (NavHost) [cite: 36]
-         */
         NavHost(
             navController = navController,
             startDestination = Routes.PAGE_HOME,
@@ -89,8 +82,6 @@ fun MainAppContainer() {
         }
     }
 }
-
-// --- 界面定义 (Screen Definitions) ---
 
 @Composable
 fun FoodHomeScreen(navController: NavHostController, viewModel: FoodViewModel) {
@@ -113,14 +104,40 @@ fun FoodHomeScreen(navController: NavHostController, viewModel: FoodViewModel) {
             SectionHeader("Change Location")
             ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    OutlinedTextField(value = addressInput, onValueChange = { addressInput = it }, label = { Text("New Address") }, modifier = Modifier.fillMaxWidth())
-                    Button(onClick = { if (addressInput.isNotBlank()) displayedAddress = addressInput }, modifier = Modifier.align(Alignment.End)) {
-                        Text("Confirm")
+                    OutlinedTextField(
+                        value = addressInput,
+                        onValueChange = { addressInput = it },
+                        label = { Text("New Address") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 10.dp),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        Button(
+                            onClick = {
+                                addressInput = ""
+                                displayedAddress = "FTSM, UKM Bangi"
+                            },
+                            modifier = Modifier.padding(end = 8.dp)
+                        ) {
+                            Text("Reset")
+                        }
+
+                        Button(onClick = {
+                            if (addressInput.isNotBlank()) {
+                                displayedAddress = addressInput
+                            }
+                        }) {
+                            Text("Confirm")
+                        }
                     }
                 }
             }
 
-            // --- 食物类别展示 (Food Categories) ---
             SectionHeader("Western Food")
             Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
                 SimpleFoodCard("Fuel Shack", "RM 18.50", R.drawable.wr1, viewModel)
@@ -169,49 +186,40 @@ fun BookingsScreen(navController: NavHostController) {
 
 @Composable
 fun FavouritesScreen(navController: NavHostController, viewModel: FoodViewModel) {
-    val user = viewModel.userProfile.value
-    val favorites = viewModel.favorites
+    val favorites by viewModel.dbFavorites.collectAsState()
 
-    Box(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Column {
-            SectionHeader("My Favourites")
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .verticalScroll(rememberScrollState())
+    ) {
+        SectionHeader("My Favourites")
 
-            if (favorites.isEmpty()) {
-                Text("Your saved items will appear here.", fontSize = 14.sp)
-            } else {
-                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    favorites.forEach { item ->
-                        SimpleFoodCard(
-                            name = item.name,
-                            price = item.price,
-                            imageRes = item.imageRes,
-                            viewModel = viewModel
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
+        if (favorites.isEmpty()) {
+            Text("Your saved items will appear here.", fontSize = 14.sp)
+        } else {
+            Column {
+                favorites.forEach { item ->
+                    SimpleFoodCard(
+                        name = item.name,
+                        price = item.price,
+                        imageRes = item.imageRes,
+                        viewModel = viewModel
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
-            }
-        }
-
-        Card(
-            modifier = Modifier.align(Alignment.TopEnd),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-        ) {
-            Column(modifier = Modifier.padding(8.dp)) {
-                Text(text = "User: ${user.username}", fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                Text(text = "ID: ${user.userId}", fontSize = 10.sp)
             }
         }
     }
 }
 
-// --- 新版个人主页 ---
 @Composable
 fun ProfileScreen(
     viewModel: FoodViewModel,
     navController: NavHostController
 ) {
-    val user = viewModel.userProfile.value
+    val user by viewModel.savedProfile.collectAsState()
 
     Column(
         modifier = Modifier
@@ -220,7 +228,6 @@ fun ProfileScreen(
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // 头像（不可修改）
         Icon(
             imageVector = Icons.Default.Person,
             contentDescription = "Avatar",
@@ -230,14 +237,12 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 用户名居中显示
         Text(
             text = user.username,
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold
         )
 
-        // UserID居中显示（无标签）
         Text(
             text = user.userId,
             style = MaterialTheme.typography.titleMedium,
@@ -246,7 +251,6 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // 信息卡片（简约圆角）
         ElevatedCard(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.medium
@@ -265,7 +269,6 @@ fun ProfileScreen(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // 编辑按钮
         Button(
             onClick = { navController.navigate(Routes.PAGE_EDIT_PROFILE) },
             modifier = Modifier.fillMaxWidth(),
@@ -278,7 +281,6 @@ fun ProfileScreen(
     }
 }
 
-// 个人信息行组件
 @Composable
 fun ProfileInfoRow(label: String, value: String) {
     Row(
@@ -290,13 +292,12 @@ fun ProfileInfoRow(label: String, value: String) {
     }
 }
 
-// --- 第五界面：编辑个人资料 ---
 @Composable
 fun EditProfileScreen(
     viewModel: FoodViewModel,
     navController: NavHostController
 ) {
-    val user = viewModel.userProfile.value
+    val user by viewModel.savedProfile.collectAsState()
 
     var username by rememberSaveable { mutableStateOf(user.username) }
     var age by rememberSaveable { mutableStateOf(user.age.toString()) }
@@ -318,7 +319,6 @@ fun EditProfileScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 头像（不可修改）
         Icon(
             Icons.Default.Person,
             "Avatar",
@@ -329,7 +329,6 @@ fun EditProfileScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // 编辑表单
         ElevatedCard(Modifier.fillMaxWidth(), MaterialTheme.shapes.medium) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
 
@@ -349,7 +348,6 @@ fun EditProfileScreen(
                     singleLine = true
                 )
 
-                // 性别选择
                 Text("Gender")
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                     Button(
@@ -380,11 +378,10 @@ fun EditProfileScreen(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // 保存按钮
         Button(
             onClick = {
                 val ageInt = age.toIntOrNull() ?: user.age
-                viewModel.updateUserProfile(username, ageInt, gender, residence)
+                viewModel.saveUserProfile(username, ageInt, gender, residence)
                 navController.popBackStack()
             },
             Modifier.fillMaxWidth().padding(bottom = 8.dp),
@@ -395,7 +392,6 @@ fun EditProfileScreen(
     }
 }
 
-// --- 带爱心收藏的食物卡片 ---
 @Composable
 fun SimpleFoodCard(
     name: String,
@@ -404,7 +400,8 @@ fun SimpleFoodCard(
     viewModel: FoodViewModel
 ) {
     val currentItem = FoodItem(name, price, imageRes)
-    val isFav = viewModel.isFavorite(currentItem)
+    val favorites by viewModel.dbFavorites.collectAsState()
+    val isFav = favorites.any { it.name == currentItem.name }
     var expanded by remember { mutableStateOf(false) }
 
     ElevatedCard(
@@ -443,16 +440,31 @@ fun SimpleFoodCard(
     }
 }
 
-// --- 基础组件 ---
 @Composable
 fun SectionHeader(title: String) {
-    Text(text = title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Black, modifier = Modifier.padding(vertical = 12.dp))
+    Text(
+        text = title,
+        style = MaterialTheme.typography.headlineSmall,
+        fontWeight = FontWeight.Black,
+        modifier = Modifier.padding(vertical = 12.dp)
+    )
 }
 
 @Composable
-fun BottomNavItem(label: String, icon: ImageVector, onClick: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { onClick() }.padding(8.dp)) {
-        Icon(icon, label, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(label, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+fun BottomNavItem(label: String, icon: ImageVector, onClick: () -> Unit = {}) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.clickable { onClick() }.padding(all = 8.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            label,
+            fontSize = 11.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
