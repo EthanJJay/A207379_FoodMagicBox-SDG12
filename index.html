@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student e-Portfolio - Zhang Junjie</title>
+    <style>
+        :root {
+            --primary-color: #2e7d32;
+            --primary-light: #e8f5e9;
+            --secondary-color: #388e3c;
+            --text-color: #333333;
+            --bg-color: #f4f6f4;
+            --card-bg: #ffffff;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 3rem 1rem;
+            text-align: center;
+        }
+
+        .header-content h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header-content p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        nav {
+            position: -webkit-sticky;
+            position: sticky;
+            top: 0;
+            background-color: var(--primary-color);
+            padding: 1rem;
+            z-index: 1000;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        nav ul {
+            list-style: none;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        nav ul li {
+            margin: 0 1rem;
+        }
+
+        nav ul li a {
+            color: white;
+            text-decoration: none;
+            font-weight: bold;
+            transition: color 0.3s;
+        }
+
+        nav ul li a:hover {
+            color: var(--primary-light);
+        }
+
+        section {
+            padding: 4rem 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        section h2 {
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--primary-color);
+            padding-bottom: 0.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .intro-box {
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-left: 5px solid var(--primary-color);
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+        }
+
+        @media (min-width: 768px) {
+            .grid-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .grid-container {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        .project-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 2rem;
+        }
+
+        @media (max-width: 500px) {
+            .project-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .video-container {
+            position: relative;
+            padding-bottom: 56.25%;
+            height: 0;
+            overflow: hidden;
+        }
+
+        .video-container iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
+
+        .card-content {
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+
+        .card-content h3 {
+            margin-bottom: 0.5rem;
+            color: var(--primary-color);
+        }
+
+        .card-content p {
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .video-note {
+            font-size: 0.85rem;
+            color: #666666;
+            background-color: #f9f9f9;
+            padding: 0.7rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            border: 1px dashed #dddddd;
+        }
+
+        .video-note a {
+            color: #0066cc;
+            text-decoration: underline;
+            font-weight: bold;
+        }
+
+        .video-note a:hover {
+            color: #003366;
+        }
+
+        .reflection-text {
+            background-color: var(--primary-light);
+            padding: 1rem;
+            border-radius: 4px;
+            font-style: italic;
+            margin-top: auto;
+            border-left: 3px solid var(--secondary-color);
+        }
+
+        .btn-github {
+            display: inline-block;
+            background-color: #24292e;
+            color: white;
+            padding: 0.7rem 1.2rem;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-top: 1rem;
+            text-align: center;
+            transition: background-color 0.3s;
+        }
+
+        .btn-github:hover {
+            background-color: #444d56;
+        }
+
+        .skills-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            list-style: none;
+        }
+
+        .skills-list li {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .resources-box {
+            background-color: var(--card-bg);
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .resources-box ul {
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        footer {
+            background-color: #222222;
+            color: white;
+            text-align: center;
+            padding: 2rem 1rem;
+            margin-top: 4rem;
+        }
+
+        footer p {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+    </style>
+</head>
+<body>
+
+    <header id="home">
+        <div class="header-content">
+            <h1>Zhang Junjie</h1>
+            <p>Matric No: A207379 | Programme: Information Technology (Computer Science and Technology)</p>
+            <p>Instructor: PROFESSOR ENCIK IZWAN BIN AZMI</p>
+        </div>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="#home">Home</a></li>
+            <li><a href="#labs">Labs</a></li>
+            <li><a href="#projects">Projects</a></li>
+            <li><a href="#reflection">Reflection</a></li>
+            <li><a href="#skills">Skills</a></li>
+            <li><a href="#resources">Resources</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <section>
+            <h2>Introduction</h2>
+            <div class="intro-box">
+                <p>I am a passionate Year 2 Information Technology student specializing in backend architecture and core programming logic. I enjoy building robust, data-driven applications and solving complex system infrastructure challenges.</p>
+                <p style="margin-top: 1rem; font-weight: bold;">SDG Goal Compliance:</p>
+                <p><strong>SDG 2: Zero Hunger</strong>, because minimizing resource waste through smart distribution systems can directly bridge the food security gap in vulnerable local communities.</p>
+            </div>
+        </section>
+
+        <section id="labs">
+            <h2>Laboratory Exercises (Labs)</h2>
+            <div class="grid-container">
+                
+                <div class="card">
+                    <div class="video-container">
+                        <iframe src="https://www.youtube.com/embed/u8FQqjbiUhg" allowfullscreen alt="Lab 1 Video Demonstration"></iframe>
+                    </div>
+                    <div class="card-content">
+                        <h3>Lab 1: UI Layout</h3>
+                        <p>Core framework establishment focusing on declarative UI layout design structures using functional visual components.</p>
+                        <div class="video-note">
+                            💡 <strong>Note:</strong> Due to differences in browser permissions or video player configurations, if the video above fails to load, please <a href="https://youtu.be/u8FQqjbiUhg" target="_blank">Click Here</a> to watch it directly on YouTube.
+                        </div>
+                        <div class="reflection-text">
+                            Building the initial UI interfaces using declarative design layouts allowed me to map out basic application structures. It was a solid introduction to arranging core components systematically.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="video-container">
+                        <iframe src="https://www.youtube.com/embed/IemyCUrMfeo" allowfullscreen alt="Lab 2 Video Demonstration"></iframe>
+                    </div>
+                    <div class="card-content">
+                        <h3>Lab 2: User Interaction</h3>
+                        <p>Event tracking integration connecting interactive user event hooks to immediate application state triggers.</p>
+                        <div class="video-note">
+                            💡 <strong>Note:</strong> Due to differences in browser permissions or video player configurations, if the video above fails to load, please <a href="https://youtu.be/IemyCUrMfeo" target="_blank">Click Here</a> to watch it directly on YouTube.
+                        </div>
+                        <div class="reflection-text">
+                            Implementing user interactivity taught me how events drive state changes in mobile environments. Fine-tuning the component reaction logic made the software feel significantly more responsive.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="video-container">
+                        <iframe src="https://www.youtube.com/embed/kwZh_j8LpFM" allowfullscreen alt="Lab 3 Video Demonstration"></iframe>
+                    </div>
+                    <div class="card-content">
+                        <h3>Lab 3: Material Design</h3>
+                        <p>Systemic theme structuring through standard design specs, component containers, and explicit padding schemas.</p>
+                        <div class="video-note">
+                            💡 <strong>Note:</strong> Due to differences in browser permissions or video player configurations, if the video above fails to load, please <a href="https://youtu.be/kwZh_j8LpFM" target="_blank">Click Here</a> to watch it directly on YouTube.
+                        </div>
+                        <div class="reflection-text">
+                            Exploring Material Design structures gave me structural templates to design cleaner, unified application flows. It helped me establish consistent padding, sizing, and structured container elements across components.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="video-container">
+                        <iframe src="https://www.youtube.com/embed/aiyJ0ArIkb8" allowfullscreen alt="Lab 4 Video Demonstration"></iframe>
+                    </div>
+                    <div class="card-content">
+                        <h3>Lab 4: Advanced Navigation</h3>
+                        <p>Multi-screen interface routing setup utilizing structural routing controllers to securely manage argument pass-through layers.</p>
+                        <div class="video-note">
+                            💡 <strong>Note:</strong> Due to differences in browser permissions or video player configurations, if the video above fails to load, please <a href="https://youtu.be/aiyJ0ArIkb8" target="_blank">Click Here</a> to watch it directly on YouTube.
+                        </div>
+                        <div class="reflection-text">
+                            Designing multi-screen navigation routing maps was critical for handling clean data transfers across application layers. It streamlined user tracking pathways across independent interface nodes.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="video-container">
+                        <iframe src="https://www.youtube.com/embed/GYGoHKmi3zs" allowfullscreen alt="Lab 5 Video Demonstration"></iframe>
+                    </div>
+                    <div class="card-content">
+                        <h3>Lab 5: Room Database</h3>
+                        <p>Local architecture persistence engine execution utilizing structured schema mappings, query entities, and asynchronous background handling loops.</p>
+                        <div class="video-note">
+                            💡 <strong>Note:</strong> Due to differences in browser permissions or video player configurations, if the video above fails to load, please <a href="https://youtu.be/GYGoHKmi3zs" target="_blank">Click Here</a> to watch it directly on YouTube.
+                        </div>
+                        <div class="reflection-text">
+                            Configuring Room local database architectures allowed me to master persistent local storage schemas. Threading query calls efficiently kept structural data intact across active application runtime cycles.
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <section id="projects">
+            <h2>Course Projects</h2>
+            <div class="project-grid">
+
+                <div class="card">
+                    <div class="video-container">
+                        <iframe src="https://www.youtube.com/embed/b2iN7fOPS9A" allowfullscreen alt="Project 1 Video Demonstration"></iframe>
+                    </div>
+                    <div class="card-content">
+                        <h3>Project 1: Food Magic Bag (Core Features)</h3>
+                        <p><strong>Problem Statement:</strong> Surrounding local vendors struggle with daily surplus inventory management, leading to unnecessary food waste.</p>
+                        <p>Integrated full navigation components across dynamic interface structures to map a responsive merchant ecosystem layout.</p>
+                        <div class="video-note">
+                            💡 <strong>Note:</strong> Due to differences in browser permissions or video player configurations, if the video above fails to load, please <a href="https://youtu.be/b2iN7fOPS9A" target="_blank">Click Here</a> to watch it directly on YouTube.
+                        </div>
+                        <div class="reflection-text">
+                            <strong>Lessons Learned:</strong> Coordinating navigation routers alongside immediate user actions required precise application lifecycle handling. Structuring state retention patterns kept user views completely synchronized.
+                        </div>
+                        <a href="https://github.com/EthanJay" class="btn-github" target="_blank">View on GitHub</a>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="video-container">
+                        <iframe src="https://www.youtube.com/embed/FFjSaeHB6pg" allowfullscreen alt="Project 2 Video Demonstration"></iframe>
+                    </div>
+                    <div class="card-content">
+                        <h3>Project 2: Food Magic Bag (Advanced Infrastructure)</h3>
+                        <p><strong>Problem Statement:</strong> Resolving localized food distribution gaps requires real-time geographic data tracking and reliable backend cloud state synchronization.</p>
+                        <p>Assembled an advanced asynchronous pipeline uniting local Room DB entities, sensor listeners, and network API connectors.</p>
+                        <div class="video-note">
+                            💡 <strong>Note:</strong> Due to differences in browser permissions or video player configurations, if the video above fails to load, please <a href="https://youtu.be/FFjSaeHB6pg" target="_blank">Click Here</a> to watch it directly on YouTube.
+                        </div>
+                        <div class="reflection-text">
+                            <strong>Lessons Learned:</strong> Merging a local Room database layer with external network API endpoints demanded reliable data synchronization pipelines. Threading background workers effectively prevented main UI performance dips.
+                        </div>
+                        <a href="https://github.com/EthanJay" class="btn-github" target="_blank">View on GitHub</a>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <section id="reflection">
+            <h2>Reflection & Learning Journey</h2>
+            <div class="intro-box">
+                <p>As a computer science undergraduate embarking on Android development for the first time, progressing from Lab 1 to Lab 5 and ultimately completing Project 2 has been a journey of watching myself build a functional application from scratch. Although the current build may appear somewhat unrefined, transitioning from basic syntax toward constructing a complete, functional application has immensely elevated my backend engineering practices. This comprehensive journey has profoundly enhanced my understanding of how data pipelines systematically flow between storage architectures and interface layers.</p>
+            </div>
+        </section>
+
+        <section id="skills">
+            <h2>Skills & Tech Stack</h2>
+            <ul class="skills-list">
+                <li>Kotlin</li>
+                <li>Jetpack Compose</li>
+                <li>Room Database</li>
+                <li>Git & GitHub</li>
+                <li>Backend Application Logic</li>
+                <li>API Integration</li>
+                <li>State Management</li>
+                <li>Asynchronous Threading</li>
+            </ul>
+        </section>
+
+        <section id="resources">
+            <h2>Resources & Acknowledgements</h2>
+            <div class="resources-box">
+                <p style="margin-bottom: 0.5rem; font-weight: bold;">Libraries & APIs Used:</p>
+                <ul>
+                    <li>Android Jetpack Components (Compose, Navigation, Lifecycle)</li>
+                    <li>Room Persistence Library Engine</li>
+                    <li>YouTube Embedded Player API System</li>
+                </ul>
+                <p style="font-style: italic; color: #666; margin-bottom: 0.5rem;">Acknowledgement: Developed with explicit collaborative technical assistance from advanced AI system tooling for framework layout optimization and backend state logic tracking.</p>
+                <p style="font-style: italic; color: #2e7d32; font-weight: bold;">Special Thanks: Sincere appreciation to Professor Encik Izwan Bin Azmi for the structured academic guidance, insightful course delivery, and invaluable support throughout this mobile programming development track.</p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 Zhang Junjie (A207379). All Rights Reserved.</p>
+        <p>Universiti Kebangsaan Malaysia (UKM) - Mobile Application Programming Course Portfolio</p>
+    </footer>
+
+</body>
+</html>
