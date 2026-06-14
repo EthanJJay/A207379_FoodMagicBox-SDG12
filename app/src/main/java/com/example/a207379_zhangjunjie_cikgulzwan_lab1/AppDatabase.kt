@@ -1,25 +1,30 @@
 package com.example.a207379_zhangjunjie_cikgulzwan_lab1
 
 import android.content.Context
+import androidx.room.Database
+import androidx.room.Room
+import androidx.room.RoomDatabase
 
 /**
- * 数据库单例持有类 (AppDatabase) [cite: 49, 50]
+ * 标准 Room 数据库持有单例类 (AppDatabase)
  */
-class AppDatabase private constructor(context: Context) {
+@Database(entities = [FoodEntity::class, UserEntity::class], version = 1, exportSchema = false)
+abstract class AppDatabase : RoomDatabase() {
 
-    private val foodDao = FoodDao(context)
-
-    // 包含你的 DAO [cite: 51]
-    fun foodDao(): FoodDao = foodDao
+    abstract fun foodDao(): FoodDao
 
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
-        // 严格落实单例模式 (Singleton instance)
+        // 严格落实单例模式初始化实例 (Singleton Pattern)
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
-                val instance = AppDatabase(context.applicationContext)
+                val instance = Room.databaseBuilder(
+                    context.applicationContext,
+                    AppDatabase::class.java,
+                    "food_app_room_db"
+                ).build()
                 INSTANCE = instance
                 instance
             }

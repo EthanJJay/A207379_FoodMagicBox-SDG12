@@ -8,6 +8,7 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,12 +20,19 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.*
+import androidx.navigation.navArgument
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.a207379_zhangjunjie_cikgulzwan_lab1.ui.theme.AppTheme
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlin.random.Random
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,18 +46,29 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+data class BookingRecord(
+    val storeName: String,
+    val orderTime: String,
+    val pickupCode: String
+)
+
 object Routes {
     const val PAGE_HOME = "home_screen"
     const val PAGE_BOOKINGS = "bookings_screen"
     const val PAGE_FAVOURITES = "fav_screen"
     const val PAGE_PROFILE = "profile_screen"
     const val PAGE_EDIT_PROFILE = "edit_profile_screen"
+    const val PAGE_CHANGE_LOCATION = "change_location_screen"
+    const val PAGE_BOX_DETAIL = "box_detail_screen"
 }
 
 @Composable
 fun MainAppContainer() {
     val navController = rememberNavController()
     val foodViewModel: FoodViewModel = viewModel()
+
+    var displayedAddress by rememberSaveable { mutableStateOf("FTSM, UKM Bangi") }
+    val bookingsList = remember { mutableStateListOf<BookingRecord>() }
 
     Scaffold(
         bottomBar = {
@@ -63,7 +82,7 @@ fun MainAppContainer() {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 BottomNavItem("Discover", Icons.Default.Share, onClick = { navController.navigate(Routes.PAGE_HOME) })
-                BottomNavItem("My Bookings", Icons.Default.List, onClick = { navController.navigate(Routes.PAGE_BOOKINGS) })
+                BottomNavItem("My Bookings", Icons.AutoMirrored.Filled.List, onClick = { navController.navigate(Routes.PAGE_BOOKINGS) })
                 BottomNavItem("Favourites", Icons.Default.FavoriteBorder, onClick = { navController.navigate(Routes.PAGE_FAVOURITES) })
                 BottomNavItem("Profile", Icons.Default.Person, onClick = { navController.navigate(Routes.PAGE_PROFILE) })
             }
@@ -74,113 +93,395 @@ fun MainAppContainer() {
             startDestination = Routes.PAGE_HOME,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(Routes.PAGE_HOME) { FoodHomeScreen(navController, foodViewModel) }
-            composable(Routes.PAGE_BOOKINGS) { BookingsScreen(navController) }
+            composable(Routes.PAGE_HOME) {
+                FoodHomeScreen(navController, foodViewModel, displayedAddress)
+            }
+            // 传入 ViewModel，这样预订界面可以调用取消订单功能
+            composable(Routes.PAGE_BOOKINGS) {
+                BookingsScreen(bookingsList, foodViewModel)
+            }
             composable(Routes.PAGE_FAVOURITES) { FavouritesScreen(navController, foodViewModel) }
             composable(Routes.PAGE_PROFILE) { ProfileScreen(foodViewModel, navController) }
             composable(Routes.PAGE_EDIT_PROFILE) { EditProfileScreen(foodViewModel, navController) }
+
+            composable(Routes.PAGE_CHANGE_LOCATION) {
+                ChangeLocationScreen(
+                    currentAddress = displayedAddress,
+                    onAddressConfirmed = { newAddress -> displayedAddress = newAddress },
+                    navController = navController
+                )
+            }
+
+            composable(
+                route = "${Routes.PAGE_BOX_DETAIL}/{name}/{price}/{imageRes}",
+                arguments = listOf(
+                    navArgument("name") { type = NavType.StringType },
+                    navArgument("price") { type = NavType.StringType },
+                    navArgument("imageRes") { type = NavType.IntType }
+                )
+            ) { backStackEntry ->
+                val name = backStackEntry.arguments?.getString("name") ?: ""
+                val price = backStackEntry.arguments?.getString("price") ?: ""
+                val imageRes = backStackEntry.arguments?.getInt("imageRes") ?: 0
+
+                MysteryBoxDetailScreen(
+                    name = name,
+                    price = price,
+                    imageRes = imageRes,
+                    navController = navController,
+                    foodViewModel = foodViewModel, // 传递 ViewModel
+                    onBookingConfirmed = { newBooking ->
+                        bookingsList.add(0, newBooking)
+                    }
+                )
+            }
         }
     }
 }
 
 @Composable
-fun FoodHomeScreen(navController: NavHostController, viewModel: FoodViewModel) {
-    var addressInput by rememberSaveable { mutableStateOf("") }
-    var displayedAddress by rememberSaveable { mutableStateOf("FTSM, UKM Bangi") }
-
+fun FoodHomeScreen(
+    navController: NavHostController,
+    viewModel: FoodViewModel,
+    displayedAddress: String
+) {
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        Box(modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.primary).statusBarsPadding().padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.LocationOn, null, tint = MaterialTheme.colorScheme.onPrimary)
-                Spacer(modifier = Modifier.width(8.dp))
-                Column {
-                    Text("Chosen location", fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f))
-                    Text(displayedAddress, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.primary)
+                .statusBarsPadding()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Default.LocationOn, null, tint = MaterialTheme.colorScheme.onPrimary)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Text("Chosen location", fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f))
+                        Text(displayedAddress, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary, maxLines = 1)
+                    }
+                }
+
+                IconButton(onClick = { navController.navigate(Routes.PAGE_CHANGE_LOCATION) }) {
+                    Icon(Icons.Default.Edit, contentDescription = "Change Location", tint = MaterialTheme.colorScheme.onPrimary)
                 }
             }
         }
 
         Column(modifier = Modifier.padding(16.dp)) {
-            SectionHeader("Change Location")
-            ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    OutlinedTextField(
-                        value = addressInput,
-                        onValueChange = { addressInput = it },
-                        label = { Text("New Address") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 10.dp),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        Button(
-                            onClick = {
-                                addressInput = ""
-                                displayedAddress = "FTSM, UKM Bangi"
-                            },
-                            modifier = Modifier.padding(end = 8.dp)
-                        ) {
-                            Text("Reset")
-                        }
-
-                        Button(onClick = {
-                            if (addressInput.isNotBlank()) {
-                                displayedAddress = addressInput
-                            }
-                        }) {
-                            Text("Confirm")
-                        }
-                    }
-                }
-            }
-
             SectionHeader("Western Food")
             Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                SimpleFoodCard("Fuel Shack", "RM 18.50", R.drawable.wr1, viewModel)
+                SimpleFoodCard("Fuel Shack", "RM 18.50", R.drawable.wr1, viewModel, navController)
                 Spacer(modifier = Modifier.width(12.dp))
-                SimpleFoodCard("TDG Gourmet", "RM 22.00", R.drawable.wr2, viewModel)
+                SimpleFoodCard("TDG Gourmet", "RM 22.00", R.drawable.wr2, viewModel, navController)
             }
 
             SectionHeader("Fast Food")
             Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                SimpleFoodCard("KFC Mystery", "RM 19.90", R.drawable.kfc, viewModel)
+                SimpleFoodCard("KFC Mystery", "RM 19.90", R.drawable.kfc, viewModel, navController)
                 Spacer(modifier = Modifier.width(12.dp))
-                SimpleFoodCard("McD Mystery", "RM 19.90", R.drawable.mcd, viewModel)
+                SimpleFoodCard("McD Mystery", "RM 19.90", R.drawable.mcd, viewModel, navController)
             }
 
             SectionHeader("Mamak")
             Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                SimpleFoodCard("Nasi Kandar", "RM 15.00", R.drawable.nk, viewModel)
+                SimpleFoodCard("Nasi Kandar", "RM 15.00", R.drawable.nk, viewModel, navController)
                 Spacer(modifier = Modifier.width(12.dp))
-                SimpleFoodCard("Nasi Goreng", "RM 12.00", R.drawable.ng, viewModel)
+                SimpleFoodCard("Nasi Goreng", "RM 12.00", R.drawable.ng, viewModel, navController)
             }
 
             SectionHeader("Chinese Food")
             Row(modifier = Modifier.horizontalScroll(rememberScrollState())) {
-                SimpleFoodCard("Dragon-i", "RM 25.00", R.drawable.dgi, viewModel)
+                SimpleFoodCard("Dragon-i", "RM 25.00", R.drawable.dgi, viewModel, navController)
                 Spacer(modifier = Modifier.width(12.dp))
-                SimpleFoodCard("Din Tai Fung", "RM 28.00", R.drawable.dtf, viewModel)
+                SimpleFoodCard("Din Tai Fung", "RM 28.00", R.drawable.dtf, viewModel, navController)
             }
         }
     }
 }
 
 @Composable
-fun BookingsScreen(navController: NavHostController) {
+fun MysteryBoxDetailScreen(
+    name: String,
+    price: String,
+    imageRes: Int,
+    navController: NavHostController,
+    foodViewModel: FoodViewModel,
+    onBookingConfirmed: (BookingRecord) -> Unit
+) {
     Column(
-        modifier = Modifier.fillMaxSize().padding(16.dp),
-        verticalArrangement = Arrangement.Top
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = { navController.popBackStack() }) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = "Mystery Box Details", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        }
+
+        if (imageRes != 0) {
+            Image(
+                painter = painterResource(id = imageRes),
+                contentDescription = name,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(240.dp),
+                contentScale = ContentScale.Crop
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .padding(24.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Text(text = name, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Black)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = price, style = MaterialTheme.typography.headlineSmall, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+
+            Spacer(modifier = Modifier.height(20.dp))
+            HorizontalDivider()
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Text(text = "What's in the Box?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Every box is a delicious surprise! You will get a random assortment of main dishes, sides, or desserts from $name's premium menu, saved at an incredible discount price. Pick up fresh and hot!",
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                lineHeight = 24.sp
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(text = "Please pick up your food before 9:00 PM.", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                }
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+                .navigationBarsPadding()
+        ) {
+            Button(
+                onClick = {
+                    val currentTime = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault()).format(Date())
+                    val charPool : List<Char> = ('A'..'Z') + ('0'..'9')
+                    val randomCode = (1..6)
+                        .map { Random.nextInt(0, charPool.size) }
+                        .map(charPool::get)
+                        .joinToString("")
+
+                    // 1. 同步推送到 Firebase 云数据库 [cite: 9, 21]
+                    foodViewModel.pushBookingToCloud(
+                        storeName = name,
+                        orderTime = currentTime,
+                        pickupCode = randomCode
+                    )
+
+                    // 2. 更新本地临时 UI 状态列表
+                    val newBooking = BookingRecord(
+                        storeName = name,
+                        orderTime = currentTime,
+                        pickupCode = randomCode
+                    )
+                    onBookingConfirmed(newBooking)
+
+                    navController.navigate(Routes.PAGE_BOOKINGS) {
+                        popUpTo(Routes.PAGE_HOME)
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Text(text = "Book Now", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+fun BookingsScreen(
+    bookingsList: MutableList<BookingRecord>, // 使用 MutableList 方便执行取消移除操作
+    foodViewModel: FoodViewModel
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
     ) {
         SectionHeader("My Bookings")
+
+        if (bookingsList.isEmpty()) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Text(
+                    "You don't have any bookings yet.",
+                    fontSize = 14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                bookingsList.forEach { booking ->
+                    ElevatedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = booking.storeName,
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                // 新增：取消预订按钮 (Cancel Booking Button)
+                                TextButton(
+                                    onClick = {
+                                        // 从 Firebase 远程云端彻底擦除，成功后在本地 UI 列表中移除 [cite: 9, 21]
+                                        foodViewModel.deleteBookingFromCloud(booking.pickupCode) {
+                                            bookingsList.remove(booking)
+                                        }
+                                    }
+                                ) {
+                                    Text("Cancel", color = Color(0xFFC62828), fontWeight = FontWeight.Bold)
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+                            HorizontalDivider(thickness = 0.5.dp)
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column {
+                                    Text("Order Time", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(text = booking.orderTime, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                                }
+
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text("Pickup Code", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Text(text = booking.pickupCode, fontSize = 16.sp, fontWeight = FontWeight.Black, color = MaterialTheme.colorScheme.error)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ChangeLocationScreen(
+    currentAddress: String,
+    onAddressConfirmed: (String) -> Unit,
+    navController: NavHostController
+) {
+    var addressInput by rememberSaveable { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp)
+            .statusBarsPadding()
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = { navController.popBackStack() }) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Change Location",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
         Text(
-            "You don't have any bookings yet.",
+            text = "Current Location: $currentAddress",
             fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 16.dp)
         )
+
+        OutlinedTextField(
+            value = addressInput,
+            onValueChange = { addressInput = it },
+            label = { Text("Enter New Address") },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.End
+        ) {
+            OutlinedButton(
+                onClick = {
+                    onAddressConfirmed("FTSM, UKM Bangi")
+                    navController.popBackStack()
+                },
+                modifier = Modifier.padding(end = 8.dp)
+            ) {
+                Text("Reset Default")
+            }
+
+            Button(
+                onClick = {
+                    if (addressInput.isNotBlank()) {
+                        onAddressConfirmed(addressInput)
+                    }
+                    navController.popBackStack()
+                }
+            ) {
+                Text("Confirm")
+            }
+        }
     }
 }
 
@@ -205,7 +506,8 @@ fun FavouritesScreen(navController: NavHostController, viewModel: FoodViewModel)
                         name = item.name,
                         price = item.price,
                         imageRes = item.imageRes,
-                        viewModel = viewModel
+                        viewModel = viewModel,
+                        navController = navController
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
@@ -228,6 +530,8 @@ fun ProfileScreen(
             .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        Spacer(modifier = Modifier.height(24.dp))
+
         Icon(
             imageVector = Icons.Default.Person,
             contentDescription = "Avatar",
@@ -267,7 +571,7 @@ fun ProfileScreen(
             }
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(40.dp))
 
         Button(
             onClick = { navController.navigate(Routes.PAGE_EDIT_PROFILE) },
@@ -376,7 +680,7 @@ fun EditProfileScreen(
             }
         }
 
-        Spacer(modifier = Modifier.weight(1f))
+        Spacer(modifier = Modifier.height(40.dp))
 
         Button(
             onClick = {
@@ -397,18 +701,20 @@ fun SimpleFoodCard(
     name: String,
     price: String,
     imageRes: Int,
-    viewModel: FoodViewModel
+    viewModel: FoodViewModel,
+    navController: NavHostController
 ) {
     val currentItem = FoodItem(name, price, imageRes)
     val favorites by viewModel.dbFavorites.collectAsState()
     val isFav = favorites.any { it.name == currentItem.name }
-    var expanded by remember { mutableStateOf(false) }
 
     ElevatedCard(
         modifier = Modifier
             .width(200.dp)
             .animateContentSize()
-            .clickable { expanded = !expanded }
+            .clickable {
+                navController.navigate("${Routes.PAGE_BOX_DETAIL}/$name/$price/$imageRes")
+            }
     ) {
         Column {
             Box {
@@ -434,7 +740,6 @@ fun SimpleFoodCard(
             Column(modifier = Modifier.padding(8.dp)) {
                 Text(name, fontWeight = FontWeight.Bold, maxLines = 1)
                 Text(price, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
-                if (expanded) Text("Pick up before 9 PM!", fontSize = 11.sp)
             }
         }
     }

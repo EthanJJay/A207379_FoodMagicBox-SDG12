@@ -1,6 +1,5 @@
 plugins {
     id("com.android.application")
-    // 补上 Compose 编译器插件（Kotlin 2.0+ 必须）
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
@@ -19,6 +18,11 @@ android {
     }
 
     buildTypes {
+        getByName("debug") {
+            // 💡 绝杀配置：强制关闭一切代码混淆与无用资源剔除，防止动态初始化的反射类和网络实体类在 Runtime 被编译器误杀
+            isMinifyEnabled = false
+            isShrinkResources = false
+        }
         release {
             isMinifyEnabled = false
             proguardFiles(
@@ -38,7 +42,6 @@ android {
     }
 
     composeOptions {
-        // 和 Kotlin 版本匹配的稳定编译器版本
         kotlinCompilerExtensionVersion = "1.5.15"
     }
 }
@@ -62,11 +65,20 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 
-    // 导航、ViewModel、Room 依赖
+    // 基础骨架组件
     implementation("androidx.navigation:navigation-compose:2.7.7")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
+
+    // 技术支柱一：本地持久化使用原生注解器隔离环境 (Room Database)
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     annotationProcessor("androidx.room:room-compiler:2.6.1")
-    implementation("androidx.datastore:datastore-preferences:1.0.0")
+
+    // 技术支柱二：网络外部公共接口对接核心库 (Retrofit REST Web API)
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+
+    // 技术支柱三：云端数据库架构标准库 (Firebase Integration)
+    implementation("com.google.firebase:firebase-firestore-ktx:25.0.0")
 }

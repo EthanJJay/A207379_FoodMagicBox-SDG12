@@ -4,7 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 /**
- * 仓储层实现类 (FoodRepository) [cite: 15, 52]
+ * 仓储层实现类 (FoodRepository)
  */
 class FoodRepository(private val foodDao: FoodDao) {
 
@@ -13,11 +13,34 @@ class FoodRepository(private val foodDao: FoodDao) {
         entities.map { FoodItem(it.name, it.price, it.imageRes) }
     }
 
-    fun insert(foodItem: FoodItem) {
+    suspend fun insert(foodItem: FoodItem) {
         foodDao.insertFavorite(FoodEntity(foodItem.name, foodItem.price, foodItem.imageRes))
     }
 
-    fun delete(foodItem: FoodItem) {
+    suspend fun delete(foodItem: FoodItem) {
         foodDao.deleteFavorite(FoodEntity(foodItem.name, foodItem.price, foodItem.imageRes))
+    }
+
+    // 获取本地持久化个人资料，若为空则映射返回默认初值
+    fun getUserProfile(userId: String): Flow<UserProfile> {
+        return foodDao.getUserProfileById(userId).map { entity ->
+            if (entity != null) {
+                UserProfile(entity.username, entity.userId, entity.age, entity.gender, entity.residence)
+            } else {
+                UserProfile() // 默认兜底初值
+            }
+        }
+    }
+
+    suspend fun saveUserProfile(userProfile: UserProfile) {
+        foodDao.insertUserProfile(
+            UserEntity(
+                userId = userProfile.userId,
+                username = userProfile.username,
+                age = userProfile.age,
+                gender = userProfile.gender,
+                residence = userProfile.residence
+            )
+        )
     }
 }
