@@ -1,7 +1,11 @@
 package com.example.a207379_zhangjunjie_cikgulzwan_lab1
 
+import android.graphics.Bitmap
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.animateContentSize
@@ -37,6 +41,22 @@ import kotlin.random.Random
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        try {
+            val options = com.google.firebase.FirebaseOptions.Builder()
+                .setApiKey("AIzaSyCdsmE0c2BzrqXpd2bZb-ZtUisCyeTUsJ8")
+                .setApplicationId("1:633288661790:android:26d92e3435ba9d3e24c70f")
+                .setProjectId("sdg12-foodmagicbox")
+                .setStorageBucket("sdg12-foodmagicbox.firebasestorage.app")
+                .build()
+
+            if (com.google.firebase.FirebaseApp.getApps(this).isEmpty()) {
+                com.google.firebase.FirebaseApp.initializeApp(this, options)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         enableEdgeToEdge()
         setContent {
             AppTheme {
@@ -65,10 +85,27 @@ object Routes {
 @Composable
 fun MainAppContainer() {
     val navController = rememberNavController()
-    val foodViewModel: FoodViewModel = viewModel()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val application = context.applicationContext as android.app.Application
+    val foodViewModel: FoodViewModel = viewModel(
+        factory = androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.getInstance(application)
+    )
 
+    // 💡 纯净版写死地址：直接显示UKM，去掉了所有 (Default) 的提示
     var displayedAddress by rememberSaveable { mutableStateOf("FTSM, UKM Bangi") }
     val bookingsList = remember { mutableStateListOf<BookingRecord>() }
+
+    val cameraLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview()
+    ) { bitmap: Bitmap? ->
+        if (bitmap != null) {
+            val mockCode = Random.nextInt(10000, 99999)
+            displayedAddress = "Verified Code: $mockCode"
+            Toast.makeText(context, "Scan Success! Receipt Verified.", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(context, "Camera action cancelled", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     Scaffold(
         bottomBar = {
@@ -94,9 +131,13 @@ fun MainAppContainer() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(Routes.PAGE_HOME) {
-                FoodHomeScreen(navController, foodViewModel, displayedAddress)
+                FoodHomeScreen(
+                    navController = navController,
+                    viewModel = foodViewModel,
+                    displayedAddress = displayedAddress,
+                    onLaunchCamera = { cameraLauncher.launch(null) }
+                )
             }
-            // 传入 ViewModel，这样预订界面可以调用取消订单功能
             composable(Routes.PAGE_BOOKINGS) {
                 BookingsScreen(bookingsList, foodViewModel)
             }
@@ -129,7 +170,7 @@ fun MainAppContainer() {
                     price = price,
                     imageRes = imageRes,
                     navController = navController,
-                    foodViewModel = foodViewModel, // 传递 ViewModel
+                    foodViewModel = foodViewModel,
                     onBookingConfirmed = { newBooking ->
                         bookingsList.add(0, newBooking)
                     }
@@ -143,7 +184,8 @@ fun MainAppContainer() {
 fun FoodHomeScreen(
     navController: NavHostController,
     viewModel: FoodViewModel,
-    displayedAddress: String
+    displayedAddress: String,
+    onLaunchCamera: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Box(
@@ -158,17 +200,27 @@ fun FoodHomeScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable { navController.navigate(Routes.PAGE_CHANGE_LOCATION) }
+                        .padding(vertical = 4.dp)
+                ) {
                     Icon(Icons.Default.LocationOn, null, tint = MaterialTheme.colorScheme.onPrimary)
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
-                        Text("Chosen location", fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f))
-                        Text(displayedAddress, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary, maxLines = 1)
+                        Text("Location", fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f))
+                        Text(displayedAddress, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary, maxLines = 1)
                     }
                 }
 
-                IconButton(onClick = { navController.navigate(Routes.PAGE_CHANGE_LOCATION) }) {
-                    Icon(Icons.Default.Edit, contentDescription = "Change Location", tint = MaterialTheme.colorScheme.onPrimary)
+                IconButton(onClick = onLaunchCamera) {
+                    Icon(
+                        painter = painterResource(id = android.R.drawable.ic_menu_camera),
+                        contentDescription = "Direct Camera",
+                        tint = MaterialTheme.colorScheme.onPrimary
+                    )
                 }
             }
         }
@@ -295,14 +347,12 @@ fun MysteryBoxDetailScreen(
                         .map(charPool::get)
                         .joinToString("")
 
-                    // 1. 同步推送到 Firebase 云数据库 [cite: 9, 21]
                     foodViewModel.pushBookingToCloud(
                         storeName = name,
                         orderTime = currentTime,
                         pickupCode = randomCode
                     )
 
-                    // 2. 更新本地临时 UI 状态列表
                     val newBooking = BookingRecord(
                         storeName = name,
                         orderTime = currentTime,
@@ -327,7 +377,7 @@ fun MysteryBoxDetailScreen(
 
 @Composable
 fun BookingsScreen(
-    bookingsList: MutableList<BookingRecord>, // 使用 MutableList 方便执行取消移除操作
+    bookingsList: MutableList<BookingRecord>,
     foodViewModel: FoodViewModel
 ) {
     Column(
@@ -370,10 +420,8 @@ fun BookingsScreen(
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.primary
                                 )
-                                // 新增：取消预订按钮 (Cancel Booking Button)
                                 TextButton(
                                     onClick = {
-                                        // 从 Firebase 远程云端彻底擦除，成功后在本地 UI 列表中移除 [cite: 9, 21]
                                         foodViewModel.deleteBookingFromCloud(booking.pickupCode) {
                                             bookingsList.remove(booking)
                                         }
@@ -432,7 +480,7 @@ fun ChangeLocationScreen(
             }
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Change Location",
+                text = "Manual Entry",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
@@ -441,7 +489,7 @@ fun ChangeLocationScreen(
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Current Location: $currentAddress",
+            text = "Current State: $currentAddress",
             fontSize = 14.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 16.dp)
@@ -450,7 +498,7 @@ fun ChangeLocationScreen(
         OutlinedTextField(
             value = addressInput,
             onValueChange = { addressInput = it },
-            label = { Text("Enter New Address") },
+            label = { Text("Enter Location or Code") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
@@ -463,12 +511,14 @@ fun ChangeLocationScreen(
         ) {
             OutlinedButton(
                 onClick = {
+                    // 💡 这里也去掉了 (Default)，干干净净
                     onAddressConfirmed("FTSM, UKM Bangi")
                     navController.popBackStack()
                 },
                 modifier = Modifier.padding(end = 8.dp)
             ) {
-                Text("Reset Default")
+                // 💡 按钮文案变得更加直接
+                Text("Reset")
             }
 
             Button(
